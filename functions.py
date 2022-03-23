@@ -2,7 +2,7 @@ import boto3
 
 def upload_data(date, time, to_upload, is_temp, dynamodb=None):
     if not dynamodb:
-        dynamodb=boto3.resource('dynamodb', region_name='eu-west-1')
+        dynamodb=boto3.resource('dynamodb', region_name='')
     
     if is_temp:
         table=dynamodb.Table('GreenhouseDataTemperature')
