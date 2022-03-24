@@ -2,7 +2,7 @@ import boto3
 
 dynamodb=None
 if not dynamodb:
-    dynamodb=boto3.resource('dynamodb', region_name='eu-west-1')
+    dynamodb=boto3.resource('dynamodb', region_name='')
 
 def upload_data_single(date, time, temp, hum):
     print("todo")
