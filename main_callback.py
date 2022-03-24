@@ -11,25 +11,27 @@ from time import sleep
 
 from digi.xbee.models.address import XBee64BitAddress
 
-MIN=0
+MIN=360
 MAX=1023
 
 SERIAL_PORT="/dev/ttyS0"
 BAUD_RATE=115200
 REMOTE_NODE_IDS=["FirstR", "SecondR", "ThirdR"]
-FIRST_NODE_ADDRESS=""
-SECOND_NODE_ADDRESS=""
-THIRD_NODE_ADDRESS=""
+FIRST_NODE_ADDRESS="0013A20041C62A53"
+SECOND_NODE_ADDRESS="0013A20041C62704"
+THIRD_NODE_ADDRESS="0013A20041C65631"
 
 LINE_ONE=IOLine.DIO3_AD3
 LINE_TWO=IOLine.DIO1_AD1
 DIGITAL_OUT_ZERO=IOLine.DIO0_AD0
 DIGITAL_OUT_ONE=IOLine.DIO1_AD1
 
-SAMPLING_RATE=20 #sampling rate in seconds
+SAMPLING_RATE=5 #sampling rate in seconds
 
 first_remote=second_remote=third_remote=None
 fan_ison=False
+on_duty=False
+auto=True
 
 local_device=XBeeDevice(SERIAL_PORT, BAUD_RATE)
 
@@ -39,20 +41,26 @@ def reset_digital_out():
 
 def check_temp(temp_c, fan_stat):
     global fan_ison
-    if temp_c > 17.0 and fan_stat==False:
+    if temp_c > 20.5 and fan_stat==False:
         fan_ison=True
         print("Fan is on")
         third_remote.set_dio_value(DIGITAL_OUT_ZERO, IOMode.DIGITAL_OUT_LOW)
-    elif temp_c < 16.5 and fan_stat==True:
+    elif temp_c < 20.0 and fan_stat==True:
         fan_ison=False
         third_remote.set_dio_value(DIGITAL_OUT_ZERO, IOMode.DIGITAL_OUT_HIGH)
         print("Fan is off")
 
 def pump_callback(duty_time):
-    third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_LOW)
-    sleep(duty_time)
-    third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_HIGH)
-    print("Water pump is off")
+    global on_duty
+    if on_duty:
+        print('Water pump is already running!')
+    else:
+        on_duty=True
+        third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_LOW)
+        sleep(duty_time)
+        third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_HIGH)
+        print("Water pump is off")
+        on_duty=False
 
 def get_remote_device():
     global first_remote, second_remote, third_remote
@@ -90,24 +98,23 @@ def sample_callback(sample, remote, time):
 
     if str(remote.get_64bit_addr()) == FIRST_NODE_ADDRESS:
         print('--')
-        #print("Reading from {0}:".format(REMOTE_NODE_IDS[0]))
         temp_c=((sample.get_analog_value(LINE_ONE) * 1200.0/1024.0)-500.0) / 10.0
         #temp_c=((sample.get_analog_value(LINE_ONE)/1023.0*1.2 - 0.5)*100.0)
         print("Temperature is {0} Celsius".format(round(temp_c, 2)))
 
-        #functions.upload_data(today, current_time, Decimal(temp_c), True)
+        functions.upload_data_double(today, current_time, Decimal(temp_c), True)
         check_temp(temp_c, fan_ison)
 
     elif str(remote.get_64bit_addr()) == SECOND_NODE_ADDRESS:
         print('--')
-        #print("Reading from {0}:".format(REMOTE_NODE_IDS[1]))
         humidity=sample.get_analog_value(LINE_TWO)
-        hum_converted=functions.convert_interval(int(humidity), MIN, MAX, 100, 0)
+        hum_converted=functions.convert_interval(int(humidity), MAX, MIN, 100, 0)
+        
         print("Humidity is {0}".format(round(hum_converted, 2)))
 
-        #functions.upload_data(today, current_time, Decimal(humidity), False)
-        if hum_converted < 50:
-            pump_thread = threading.Thread(target=pump_callback, args=(5,))
+        functions.upload_data_double(today, current_time, Decimal(humidity), False)
+        if hum_converted < 50 and on_duty==False:
+            pump_thread = threading.Thread(target=pump_callback, args=(10,))
             pump_thread.start()
             print('Water pump is running')
     
@@ -119,7 +126,7 @@ try:
     get_remote_device()
 
     local_device.add_io_sample_received_callback(sample_callback)
-    while True:
+    while auto:
         pass
 
 except KeyboardInterrupt:
