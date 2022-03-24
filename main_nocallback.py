@@ -17,16 +17,16 @@ MAX=1023
 SERIAL_PORT="/dev/ttyS0"
 BAUD_RATE=115200
 REMOTE_NODE_IDS=["FirstR", "SecondR", "ThirdR"]
-FIRST_NODE_ADDRESS="0013A20041C62A53"
-SECOND_NODE_ADDRESS="0013A20041C62704"
-THIRD_NODE_ADDRESS="0013A20041C65631"
+FIRST_NODE_ADDRESS=""
+SECOND_NODE_ADDRESS=""
+THIRD_NODE_ADDRESS=""
 
 LINE_ONE=IOLine.DIO3_AD3
 LINE_TWO=IOLine.DIO1_AD1
 DIGITAL_OUT_ZERO=IOLine.DIO0_AD0
 DIGITAL_OUT_ONE=IOLine.DIO1_AD1
 
-SAMPLING_RATE=5 #sampling rate in seconds
+SAMPLING_RATE=15 #sampling rate in seconds
 
 first_remote=second_remote=third_remote=None
 fan_ison=False
@@ -121,7 +121,7 @@ try:
 
     while auto:
         get_data()
-        sleep(15)
+        sleep(SAMPLING_RATE)
 
 except KeyboardInterrupt:
     if local_device is not None and local_device.is_open():
