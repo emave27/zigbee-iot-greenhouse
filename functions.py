@@ -1,9 +1,13 @@
 import boto3
 
-def upload_data(date, time, to_upload, is_temp, dynamodb=None):
-    if not dynamodb:
-        dynamodb=boto3.resource('dynamodb', region_name='')
-    
+dynamodb=None
+if not dynamodb:
+    dynamodb=boto3.resource('dynamodb', region_name='eu-west-1')
+
+def upload_data_single(date, time, temp, hum):
+    print("todo")
+
+def upload_data(date, time, to_upload, is_temp):
     if is_temp:
         table=dynamodb.Table('GreenhouseDataTemperature')
     
