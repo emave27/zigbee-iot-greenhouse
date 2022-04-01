@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  {{ turbo() }}
+  <title>Greenhouse Dashboard Demo</title>
+  <style>
+    /*.result{
+      max-width: 250px;
+      border: 1px solid black;
+      padding: 15px;
+    }*/
+    .navbar{background-color: #004225;}
+    .separator{margin-top:10px;}
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button{
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    /* Firefox */
+    input[type=number] {-moz-appearance: textfield;}
+  </style>
+</head>
+<body>
+<header>
+  <nav class="navbar navbar-expand-sm navbar-dark justify-content-end">
+  <a class="navbar-brand">Dashboard</a>
+  <span class="ml-auto"></span>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+  <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse flex-grow-0" id="navbarSupportedContent">
+    <ul class="navbar-nav text-right">
+      <li class="nav-item active">
+        <a class="nav-link">Log out</a>
+      </li>
+    </ul>
+  </div>
+  </nav>
+</header>
+<div class="container separator">
+  <div class="row">
+    <div class="col-md-4">{% include "loadavg.html" %}</div>
+    <div class="col-md-8">
+    <h4>Settings</h4>
+    <form class="set-form" role="form" id="set-form">
+      <div class="form-row align-items-center">
+        <div class="col-auto">
+          <label for="temp_t" class="form-label">Temperature threshold</label>
+          <input type="number" name="temp_t" class="form-control" id="temp_t">
+        </div>
+        <div class="col-auto">
+          <label for="pump_duty" class="form-label">Pump duty time (in seconds)</label>
+          <input type="number" name="pump_d" class="form-control" id="pump_duty">
+        </div>
+        <div class="col-auto">
+          <label for="update_int" class="form-label">Update interval (in seconds)</label>
+          <input type="number" name="up_int" class="form-control" id="update_int">
+        </div>
+      </div>
+    <div class="form-row align-items-center">
+      <div class="col-auto">
+        <label class="my-1 mr-2" for="mode">Mode</label>
+        <select class="custom-select mr-sm-2" name="mode" id="mode">
+          <option selected value="1">Auto</option>
+          <option value="0">Manual</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="my-1 mr-2" for="fan_stat">Fan</label>
+        <select class="custom-select mr-sm-2" name="fan" id="fan_stat">
+          <option selected value="1">On</option>
+          <option value="0">Off</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="my-1 mr-2" for="pump_stat">Pump</label>
+        <select class="custom-select mr-sm-2" name="pump" id="pump_stat">
+          <option selected value="1">On</option>
+          <option value="0">Off</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="my-1 mr-2" for="up_stat">Upload data</label>
+        <select class="custom-select mr-sm-2" name="upload" id="up_stat">
+          <option selected value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
+      </div>
+    </div>
+    <small id="warning" class="form-text text-muted">
+      Set manual mode to manually controll fan and pump
+    </small>
+    <button type="button" class="btn btn-primary">Update</button>
+    </form>
+    </div>
+  </div>
+</div>
+<footer>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" integrity="sha384-zCbKRCUGaJDkqS1kPbPd7TveP5iyJE0EjAuZQTgFLD2ylzuqKfdKlfG/eSrtxUkn" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF" crossorigin="anonymous"></script>
+<script>
+  $(function(){
+	  $('button').click(function(){
+		  $.ajax({
+			  url: '/update_set',
+			  data: $('form').serialize(),
+			  type: 'POST',
+			  success: function(response){
+				  console.log(response);
+          $('#set-form')[0].reset();
+			  },
+			  error: function(error){
+				  console.log(error);
+          $('#set-form')[0].reset();
+			  }
+		  });
+	  });
+  });
+</script>
+</footer>
+</body>
+</html>
