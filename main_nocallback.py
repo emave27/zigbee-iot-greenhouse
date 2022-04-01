@@ -155,7 +155,13 @@ try:
     print(local_device.get_protocol())
 
     discovered_devices=discover_remote_device(zigbee_network, local_device)
-    connect_remote_device(zigbee_network, discovered_devices)
+    if discovered_devices:
+        connect_remote_device(zigbee_network, discovered_devices)
+    else:
+        print('404: nodes not found')
+        local_device.reset()
+        local_device.close()
+        exit()
 
     while True:
         threshold, duty_time, upload_interval, mode, _, _, upload=functions.get_settings() 
