@@ -70,8 +70,8 @@ def update_data(dynamodb, t, d, u, m, f, p, up):
                 ':d': Decimal(d),
                 ':u': Decimal(u),
                 ':m': bool(m),
-                ':f': bool(f),
-                ':p': bool(p),
+                ':f': f,
+                ':p': p,
                 ':up': bool(up)
             },
             ExpressionAttributeNames={
@@ -101,12 +101,12 @@ def update_set():
     update = request.form['up_int']
 
     mode = request.form['mode']
-    fan = request.form['fan']
-    pump = request.form['pump']
+    fan = True
+    pump = True
     upload = request.form['upload']
 
     print(thresh, duty, update, mode, fan, pump, upload)
-    updated=update_data(ext_dynamodb, thresh, duty, update, int(mode), int(fan), int(pump), int(upload))
+    updated=update_data(ext_dynamodb, thresh, duty, update, int(mode), fan, pump, int(upload))
     print(type(updated), updated)
 
     return json.dumps({'status':'OK','thresh':thresh,'duty':duty,'update':update,'mode':mode,'fan':fan,'pump':pump,'upload':upload})
