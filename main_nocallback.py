@@ -5,7 +5,7 @@ import functions
 import threading
 
 from digi import xbee
-from digi.xbee.devices import XBeeDevice, RemoteXBeeDevice
+from digi.xbee.devices import XBeeDevice
 from digi.xbee.io import IOLine, IOMode
 from time import sleep
 
@@ -29,9 +29,13 @@ DIGITAL_OUT_ONE=IOLine.DIO1_AD1
 SAMPLING_RATE=15 #sampling rate in seconds
 
 first_remote=second_remote=third_remote=None
+threshold=20
+duty_time=5
+upload_interval=15
+mode=True
 fan_ison=False
-on_duty=True
-auto=True
+pump_ison=False
+upload=False
 
 local_device=XBeeDevice(SERIAL_PORT, BAUD_RATE)
 
@@ -41,26 +45,26 @@ def reset_digital_out():
 
 def check_temp(temp_c, fan_stat):
     global fan_ison
-    if temp_c > 21.0 and fan_stat==False:
+    if temp_c > threshold and fan_stat==False:
         fan_ison=True
         print("Fan is on")
         third_remote.set_dio_value(DIGITAL_OUT_ZERO, IOMode.DIGITAL_OUT_LOW)
-    elif temp_c < 20.5 and fan_stat==True:
+    elif temp_c < (threshold+0.5) and fan_stat==True:
         fan_ison=False
         third_remote.set_dio_value(DIGITAL_OUT_ZERO, IOMode.DIGITAL_OUT_HIGH)
         print("Fan is off")
 
-def pump_callback(duty_time):
-    global on_duty
-    if on_duty:
+def pump_callback(d_t):
+    global pump_ison
+    if pump_ison:
         print('Water pump is already running!')
     else:
-        on_duty=True
+        pump_ison=True
         third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_LOW)
-        sleep(duty_time)
+        sleep(d_t)
         third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_HIGH)
-        print('Water pump is off')
-        on_duty=False
+        print('Water pump off after {0} seconds'.format(d_t))
+        pump_ison=False
 
 def get_remote_device():
     global first_remote, second_remote, third_remote
@@ -101,16 +105,17 @@ def get_data():
     hum_converted=functions.convert_interval(int(humidity), MAX, MIN, 100, 0)
 
     print('--')
-    print("Temperature is {0}C".format(round(temp_c, 2)))  
-    print("Humidity is {0}%".format(round(hum_converted, 2)))
-    check_temp(temp_c, fan_ison)
-    print('--')
+    print("Temperature is {0}C".format(round(temp_c, 2)), "Humidity is {0}%".format(round(hum_converted, 2)))
 
-    #functions.upload_data_single(today, current_time, Decimal(temp_c), Decimal(humidity))
-    if hum_converted < 50 and on_duty==False:
-        pump_thread = threading.Thread(target=pump_callback, args=(5,))
+    check_temp(temp_c, fan_ison)
+    functions.upload_data_single(today, current_time, Decimal(temp_c), Decimal(humidity), upload)
+
+    if hum_converted < 50 and pump_ison==False:
+        pump_thread = threading.Thread(target=pump_callback, args=(duty_time,))
         pump_thread.start()
-        print('qq--Water pump is running--qq')
+        print('Water pump (should be) running')
+    
+    print('--')
     
 try:
     print("Read and upload data")
@@ -119,9 +124,11 @@ try:
     print(local_device.get_protocol())
     get_remote_device()
 
-    while auto:
-        get_data()
-        sleep(SAMPLING_RATE)
+    while True:
+        threshold, duty_time, upload_interval, mode, _, _, upload=functions.get_settings() 
+        if mode: #auto
+            get_data()
+            sleep(upload_interval)
 
 except KeyboardInterrupt:
     if local_device is not None and local_device.is_open():
