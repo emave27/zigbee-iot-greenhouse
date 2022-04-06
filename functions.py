@@ -29,7 +29,7 @@ def get_settings():
     table=dynamodb.Table('settings')
 
     try:
-        response=table.get_item(Key={'user_id': '', 'set_id':})
+        response=table.get_item(Key={'user_id': 'admin', 'set_id':0})
     except ClientError as e:
         print(e.response['Error']['Message'])
     else:
@@ -39,11 +39,26 @@ def get_settings():
     d_time=int(res['duty_time'])
     upd_time=int(res['update'])
     mode=res['mode']
-    fan=res['fan']
-    pump=res['pump']
+    #fan=res['fan']
+    #pump=res['pump']
     upload=res['upload']
 
-    return temp_t, d_time, upd_time, mode, fan, pump, upload
+    return temp_t, d_time, upd_time, mode, upload
+
+def get_manual():
+    table=dynamodb.Table('settings')
+
+    try:
+        response=table.get_item(Key={'user_id': 'admin', 'set_id':1})
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+    else:
+        res=response['Item']
+    
+    fan=res['fan']
+    pump=res['pump']
+
+    return fan, pump
 
 def upload_data(date, time, to_upload, is_temp):
     if is_temp:
