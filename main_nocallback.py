@@ -16,6 +16,8 @@ MAX=1023
 
 SERIAL_PORT="/dev/ttyS0"
 BAUD_RATE=115200
+
+#deprecated, nodes are automatically discovered by the script
 REMOTE_NODE_IDS=["FirstR", "SecondR", "ThirdR"]
 FIRST_NODE_ADDRESS=""
 SECOND_NODE_ADDRESS=""
@@ -23,29 +25,51 @@ THIRD_NODE_ADDRESS=""
 
 LINE_ONE=IOLine.DIO3_AD3
 LINE_TWO=IOLine.DIO1_AD1
-DIGITAL_OUT_ZERO=IOLine.DIO0_AD0
-DIGITAL_OUT_ONE=IOLine.DIO1_AD1
+DIGITAL_OUT_ONE=IOLine.DIO1_AD1 #pump
+DIGITAL_OUT_TWO=IOLine.DIO2_AD2 #fan
 
-#sampling rate in seconds
 #deprecated, use upload_interval
-SAMPLING_RATE=15
+SAMPLING_RATE=15 #sampling rate in seconds
 
 first_remote=second_remote=third_remote=None
 threshold=20
 duty_time=5
-upload_interval=15
-mode=True
+upload_interval=10
+mode=True #True --> auto, False --> manual
 fan_ison=False
+pump_ison=False
 upload=False
+reset=True
+
 #internal bool var to check if pump is running (auto mode)
 #set to False to let the pump run on code start-up
-pump_duty=True
+pump_duty=False
 
 local_device=XBeeDevice(SERIAL_PORT, BAUD_RATE)
 
 def reset_digital_out():
-    third_remote.set_dio_value(DIGITAL_OUT_ZERO, IOMode.DIGITAL_OUT_HIGH)
-    third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_HIGH)
+    global reset
+    if reset:
+        third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_HIGH)
+        third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_HIGH)
+        print('Digital output resetted')
+        reset=False
+    else:
+        print('No need to reset')
+        
+def manual_control(fan, pump):
+    if fan and pump:
+        third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_LOW)
+        third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_LOW)
+    if fan and pump==False:
+        third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_HIGH)
+        third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_LOW)
+    if fan==False and pump:
+        third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_LOW)
+        third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_HIGH)
+    if fan==False and pump==False:
+        third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_HIGH)
+        third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_HIGH)
 
 def check_temp(temp_c, fan_stat):
     global fan_ison
@@ -102,13 +126,21 @@ def discover_remote_device(network, device):
 def connect_remote_device(network, devices):
     global first_remote, second_remote, third_remote
 
-    print("Connecting device")
+    print("Connecting devices")
 
     first_remote=network.discover_device(devices[0])
     second_remote=network.discover_device(devices[1])
     third_remote=network.discover_device(devices[2])
 
     remote_devices=[first_remote, second_remote, third_remote]
+    
+    #check the ADC voltage reference, 00 --> 1.25V, 01 --> 2.5V, 02 --> VCC
+    #set to 02 (if needed) for a more accurate sensor read
+    #first_remote.set_parameter('AV', utils.hex_string_to_bytes('02'))
+    #second_remote.set_parameter('AV', utils.hex_string_to_bytes('02'))
+    av1=utils.hex_to_string(first_remote.get_parameter('AV'))
+    av2=utils.hex_to_string(second_remote.get_parameter('AV'))
+    print('First and second node analog reference: ', av1, av2)
 
     if remote_devices is None:
         print("Error: nodes ids not found")
@@ -130,7 +162,7 @@ def get_data():
     now=datetime.now()
     current_time=now.strftime("%H-%M-%S")
 
-    temp_c=((first_remote.get_adc_value(LINE_ONE) * 1200.0/1024.0)-500.0) / 10.0
+    temp_c=((first_remote.get_adc_value(LINE_ONE) * 3200.0/1024.0)-500.0) / 10.0
     humidity=second_remote.get_adc_value(LINE_TWO)
     hum_converted=functions.convert_interval(int(humidity), MAX, MIN, 100, 0)
 
@@ -159,20 +191,27 @@ try:
         connect_remote_device(zigbee_network, discovered_devices)
     else:
         print('404: nodes not found')
-        local_device.reset()
+        #local_device.reset()
         local_device.close()
         exit()
 
     while True:
-        threshold, duty_time, upload_interval, mode, _, _, upload=functions.get_settings() 
+        threshold, duty_time, upload_interval, mode, upload=functions.get_settings() 
         if mode: #auto
             get_data()
+            sleep(upload_interval)
+        else:
+            print('Manual mode')
+            reset=False
+            reset_digital_out()
+            fan_ison, pump_ison=functions.get_manual()
+            manual_control(fan_ison, pump_ison)
             sleep(upload_interval)
 
 except KeyboardInterrupt:
     if local_device is not None and local_device.is_open():
         reset_digital_out()
         
-        local_device.reset()
+        #local_device.reset()
         local_device.close()
         print("Execution stopped by the user, device closed and resetted")
