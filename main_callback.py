@@ -63,6 +63,7 @@ def pump_callback(duty_time):
         on_duty=False
 
 def get_remote_device():
+    #manual discover
     global first_remote, second_remote, third_remote
     xbee_network=local_device.get_network()
 
