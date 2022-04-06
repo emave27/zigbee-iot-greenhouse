@@ -28,9 +28,9 @@ def convert_interval(value, leftMin, leftMax, rightMin, rightMax):
 
     return round(newValue, 2)
 
-def get_data(dynamodb):
+def get_data(dynamodb, delta=2):
     if not dynamodb:
-        dynamodb = boto3.resource('dynamodb', region_name='')
+        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
         print('Connected from callback')
     else:
         print('External connection')
@@ -39,18 +39,18 @@ def get_data(dynamodb):
 
     try:
         today = date.today()
-        past = today - timedelta(days=1)
+        past = today - timedelta(days=delta)
         response = table.query(
             KeyConditionExpression=Key('date').eq(str(past)),
-            Limit=5,
+            Limit=2,
             ScanIndexForward=False
         )
     except ClientError as e:
         print(e.response['Error']['Message'])
     else:
-        return response['Items']
+        return response['Items'], past
 
-def update_data(dynamodb, t, d, u, m, f, p, up):
+def update_sets(dynamodb, t, d, u, m, f, p, up):
     if not dynamodb:
         dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
         print('Connected from callback')
@@ -90,6 +90,36 @@ def update_data(dynamodb, t, d, u, m, f, p, up):
     else:
         return response
 
+def update_manual(dynamodb, f, p):
+    if not dynamodb:
+        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+        print('Connected from callback')
+    else:
+        print('External connection')
+
+    table=dynamodb.Table('settings')
+    try:
+        response=table.update_item(
+            Key={
+                'user_id': 'admin',
+                'set_id': 1
+            },
+            UpdateExpression="set #fa=:f, #pum=:p",
+            ExpressionAttributeValues={
+                ':f': f,
+                ':p': p
+            },
+            ExpressionAttributeNames={
+                '#fa': 'fan',
+                '#pum': 'pump',
+            }
+        )
+
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+    else:
+        return response
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -110,6 +140,45 @@ def update_set():
     print(type(updated), updated)
 
     return json.dumps({'status':'OK','thresh':thresh,'duty':duty,'update':update,'mode':mode,'fan':fan,'pump':pump,'upload':upload})
+
+@app.route('/handle_manual', methods=['POST'])
+def handle_manual():
+    fan_stat=request.form['fan_stat']
+    pump_stat=request.form['pump_stat']
+
+    updated_set=update_manual(ext_dynamodb, int(fan_stat), int(pump_stat))
+    print(int(fan_stat), int(pump_stat))
+
+    return json.dumps({'status':'OK','fan_stat':fan_stat,'pump_stat':pump_stat})
+@app.route('/get_set', methods=['POST']) #get current setting on page load
+def get_current_settings(dynamodb=ext_dynamodb):
+
+    if not dynamodb:
+        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+        print('Connected from callback')
+    else:
+        print('External connection')
+
+    table=dynamodb.Table('settings')
+
+    try:
+        response=table.get_item(Key={'user_id':'admin', 'set_id':0})
+        man_res=table.get_item(Key={'user_id':'admin', 'set_id':1})
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+    else:
+        res=response['Item']
+        man=man_res['Item']
+    
+    temp_t=int(res['threshold'])
+    d_time=int(res['duty_time'])
+    upd_time=int(res['update'])
+    mode=res['mode']
+    upload=res['upload']
+    fan_stat=man['fan']
+    pump_stat=man['pump']
+
+    return json.dumps({'status':'OK','thresh':temp_t,'duty':d_time,'update':upd_time,'mode':mode,'upload':upload, 'fan_stat':fan_stat, 'pump_stat':pump_stat})
 
 @app.context_processor
 def update_fromDynamoDB():
@@ -136,7 +205,7 @@ def update_fromDynamoDB():
 def update_load():
     with app.app_context():
         while True:
-            time.sleep(60)
+            time.sleep(300)
             turbo.push(turbo.replace(render_template('loadavg.html'), 'result'))
             #print("clients: ", turbo.clients)
 
