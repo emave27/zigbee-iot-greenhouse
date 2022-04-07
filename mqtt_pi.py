@@ -30,11 +30,11 @@ mqttc.on_connect=on_connect
 mqttc.on_message=on_message
 
 #define the endpoint, the port and the certificate paths
-endpoint="a185t3bpm5e89j-ats.iot.eu-west-1.amazonaws.com"
+endpoint="your endpoint"
 port=8883
-ca_path="certs/Amazon-root-CA-1.pem"
-cert_path="certs/certificate.pem.crt"
-key_path="certs/private.pem.key"
+ca_path="certs/"
+cert_path="certs/"
+key_path="certs/"
 
 #set the certificate and the key file
 mqttc.tls_set(ca_path, certfile=cert_path, keyfile=key_path, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
