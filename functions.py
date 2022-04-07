@@ -4,7 +4,7 @@ from botocore.exceptions import ClientError
 #connect to remote dynamodb database
 dynamodb=None
 if not dynamodb:
-    dynamodb=boto3.resource('dynamodb', region_name='eu-west-1')
+    dynamodb=boto3.resource('dynamodb', region_name='')
 
 #function to upload data
 def upload_data_single(date, time, temp, hum, upload):
