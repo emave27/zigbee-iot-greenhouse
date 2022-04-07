@@ -18,7 +18,7 @@ app=Flask(__name__)
 turbo=Turbo(app)
 
 #connect to remote dynamodb database
-ext_dynamodb=boto3.resource('dynamodb', region_name='eu-west-1')
+ext_dynamodb=boto3.resource('dynamodb', region_name='')
 
 #deprecated, data is already converted by the Pi script
 def convert_interval(value, leftMin, leftMax, rightMin, rightMax):
@@ -33,7 +33,7 @@ def convert_interval(value, leftMin, leftMax, rightMin, rightMax):
 #get temperature and humidity data from database
 def get_data(dynamodb, delta=6):
     if not dynamodb:
-        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+        dynamodb = boto3.resource('dynamodb', region_name='')
         print('Connected from callback')
     else:
         print('External connection')
@@ -58,7 +58,7 @@ def get_data(dynamodb, delta=6):
 #function to update settings table
 def update_sets(dynamodb, t, d, u, m, f, p, up):
     if not dynamodb:
-        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+        dynamodb = boto3.resource('dynamodb', region_name='')
         print('Connected from callback')
     else:
         print('External connection')
@@ -99,7 +99,7 @@ def update_sets(dynamodb, t, d, u, m, f, p, up):
 #function to update manual fan/pump stat
 def update_manual(dynamodb, f, p):
     if not dynamodb:
-        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+        dynamodb = boto3.resource('dynamodb', region_name='')
         print('Connected from callback')
     else:
         print('External connection')
