@@ -19,14 +19,14 @@ MIN=360
 MAX=1023
 
 #raspberry pi GPIO serial
-SERIAL_PORT="/dev/ttyS0"
+SERIAL_PORT=""
 BAUD_RATE=115200
 
 #deprecated, nodes are automatically discovered by the script
 REMOTE_NODE_IDS=["FirstR", "SecondR", "ThirdR"]
-FIRST_NODE_ADDRESS="0013A20041C62A53"
-SECOND_NODE_ADDRESS="0013A20041C62704"
-THIRD_NODE_ADDRESS="0013A20041C65631"
+FIRST_NODE_ADDRESS=""
+SECOND_NODE_ADDRESS=""
+THIRD_NODE_ADDRESS=""
 
 #remote xbee IO line
 LINE_ONE=IOLine.DIO3_AD3 #first node, temperature
