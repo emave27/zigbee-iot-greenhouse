@@ -26,7 +26,7 @@ class PiMQTT():
 
         #on_message callback
         def on_message(client, userdata, msg):
-            #filter the message using topic
+            #filter the message using message topic
             if msg.topic=='manual':
                 #unpack the message, from byte to int
                 [f, p]=struct.unpack('ii', msg.payload)
@@ -46,11 +46,11 @@ class PiMQTT():
         self.mqttc.on_message=on_message
 
         #define the endpoints, the port and the certificate paths
-        endpoint="a185t3bpm5e89j-ats.iot.eu-west-1.amazonaws.com"
-        port=8883
-        ca_path="certs/Amazon-root-CA-1.pem"
-        cert_path="certs/certificate.pem.crt"
-        key_path="certs/private.pem.key"
+        endpoint="your-endpoint"
+        port=8883 #default port
+        ca_path="certs/"
+        cert_path="certs/"
+        key_path="certs/"
 
         #set the certificate and the key files
         self.mqttc.tls_set(ca_path, certfile=cert_path, keyfile=key_path, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
