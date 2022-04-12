@@ -4,9 +4,10 @@ from time import sleep
 import threading
 import struct
 
-#import the external files
+
+#import external files
 import functions
-import mqtt_pi
+from mqttpi_class import PiMQTT
 
 #import from the digi xbee python library
 from digi.xbee.util import utils
@@ -44,6 +45,7 @@ first_remote=second_remote=third_remote=None
 
 #default values
 threshold=20
+hum_thresh=50
 duty_time=5
 upload_interval=10
 mode=True #True --> auto, False --> manual
@@ -51,8 +53,10 @@ fan_ison=False
 pump_ison=False
 upload=False
 reset=True
+mqtt_pi=None
 
 #internal bool var to check if pump is running (auto mode)
+#if True, the pump will never start
 #set to False to let the pump run on code start-up
 pump_duty=False
 
@@ -87,14 +91,14 @@ def manual_control(fan, pump):
         third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_HIGH)
         
 #function to activate the fan if temperature is above a certain threshold
-#fan_ison (global) and fan_stat (local) are used to check if the fan is already running
-def check_temp(temp_c, fan_stat):
+#fan_ison (global) is used to check if the fan is already running
+def check_temp(temp_c):
     global fan_ison
-    if temp_c > threshold and fan_stat==False:
+    if temp_c > threshold and fan_ison==False:
         fan_ison=True
         print("Fan is on")
         third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_LOW)
-    elif temp_c < (threshold+0.5) and fan_stat==True:
+    elif temp_c < (threshold+0.5) and fan_ison==True:
         fan_ison=False
         third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_HIGH)
         print("Fan is off")
@@ -143,7 +147,7 @@ def discover_remote_device(network, device):
     finally:
         if device is not None and device.is_open():
             #show and return all the discovered nodes
-            print('All discovered nodes: ', sorted(device_list))
+            print('Nodes discovered: ', sorted(device_list))
             return sorted(device_list)
 
 #connect the discovered nodes
@@ -186,7 +190,7 @@ def connect_remote_device(network, devices):
         print("Device connected: ", rem_dev)
 
 #function to get data from the remote nodes and upload to the DB
-def get_data():
+def get_data(is_auto):
     #get the current date and time in hour-minutes-seconds format
     today=str(date.today())
     now=datetime.now()
@@ -202,28 +206,33 @@ def get_data():
 
     print('--') #print the values
     print("Temperature is {0} °C".format(temp_r), "Humidity is {0}%".format(hum_converted))
-
-    #use check temp function to check if the temperature is above the threshold
-    check_temp(temp_r, fan_ison)
-    #upload the data to the database
-    functions.upload_data_single(today, current_time, Decimal(temp_c), Decimal(humidity), upload)
     
-    #pack the data into a bytearray and send them to the dashboard using MQTT
+    if is_auto:
+        #use check temp function to check if the temperature is above the threshold
+        check_temp(temp_r, fan_ison)
+        #upload the data to the database
+        functions.upload_data_single(today, current_time, Decimal(temp_c), Decimal(humidity), upload)
+
+        #pack the data into a bytearray and send them to the dashboard using MQTT
+        data_bytes=struct.pack('ff', temp_r, hum_converted)
+        mqtt_pi.send_message('sensors', data_bytes)
+
+        #check the humidity value
+        if hum_converted < 0 and pump_duty==False:
+            #start the pump callback using a separate thread, without blocking the main thread
+            pump_thread=threading.Thread(target=pump_callback, args=(duty_time,))
+            pump_thread.daemon=True
+            pump_thread.start()
+            print('Water pump running')
+    
+    #pack the data as bytes and send them via MQTT
     data_bytes=struct.pack('ff', temp_r, hum_converted)
     mqtt_pi.send_message('sensors', data_bytes)
-    
-    #check the humidity value
-    if hum_converted < 0 and pump_duty==False:
-        #start the pump callback using a separate thread, without blocking the main thread
-        pump_thread=threading.Thread(target=pump_callback, args=(duty_time,))
-        pump_thread.daemon=True
-        pump_thread.start()
-        print('Water pump running')
     
     print('--')
     
 try:
-    print("Read and upload data")
+    print("Welcome!")
     #open the local device, clean the queues and get the network
     local_device.open()
     local_device.flush_queues()
@@ -237,6 +246,7 @@ try:
     if discovered_devices:
         #connect the remote device (if found)
         connect_remote_device(zigbee_network, discovered_devices)
+        mqtt_pi=PiMQTT()
     else:
         #if not, close the local device and exit the script
         print('404: nodes not found')
@@ -244,28 +254,29 @@ try:
         exit()
 
     while True:
-        #get the settings
-        threshold, duty_time, upload_interval, mode, upload=functions.get_settings()
-        if mode: #auto mode
+        mqtt_mode=mqtt_pi.pass_mode()
+        if mode==True and mqtt_mode==True: #auto mode
+            #get the settings
+            threshold, duty_time, upload_interval, _, upload=functions.get_settings()
+            print('--\nAutomatic')
             get_data() #call get data (main function)
             sleep(upload_interval) #wait time defined by the user
         else: #manual mode, data will not be uploaded
-            print('Manual mode')
+            print('--\nManual')
             reset_digital_out() #reset (once) the digital output
             reset=False
-            fan_ison, pump_ison=mqtt_pi.pass_data() #get the fan and pump stat from mqtt topic
-            manual_control(fan_ison, pump_ison) #call manual_control() to start/stop the fan or the pump 
-            sleep(1)
+            fan_man, pump_man=mqtt_pi.pass_data() #get the fan and pump stat from mqtt topic
+            manual_control(fan_man, pump_man) #call manual_control() to start/stop the fan or the pump 
+            sleep(5)
 
 except KeyboardInterrupt: #handle KeyboardInterrupt event (ctrl+c)
     if local_device is not None and local_device.is_open():
         #reset the digital output and close the local device
         reset=True
         reset_digital_out()
-        #local_device.reset()
+        local_device.reset()
         local_device.close()
+        #close mqtt connection
+        mqtt_pi.on_keyboardinterrupt()
         
         print("Execution stopped by the user, device closed and resetted")
-
-        #close the mqtt connection
-        mqtt_pi.on_keyboardinterrupt()
