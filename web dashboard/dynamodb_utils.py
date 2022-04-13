@@ -6,7 +6,7 @@ from boto3.dynamodb.conditions import Key
 
 class DynamoUtils():
     def __init__(self):
-        self.dynamodb=boto3.resource('dynamodb', region_name='eu-west-1')
+        self.dynamodb=boto3.resource('dynamodb', region_name='your-region')
 
     #deprecated, data is already converted by the Pi script
     def convert_interval(self, value, leftMin, leftMax, rightMin, rightMax):
@@ -30,7 +30,7 @@ class DynamoUtils():
                 #query the table by using the date key
                 KeyConditionExpression=Key('date').eq(str(past)),
                 #KeyConditionExpression=Key('date').between(str(today), str(past)),
-                Limit=limit, #choose how much date to retrive
+                Limit=limit, #choose how much data retrive
                 ScanIndexForward=False
             )
         except ClientError as e:
