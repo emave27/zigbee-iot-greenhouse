@@ -169,13 +169,13 @@
     document.getElementById('h_tt').innerHTML=data.hum_thresh;
     document.getElementById('c_upint').innerHTML=data.update;
 
-    if (data.mode==true){ document.getElementById('md').innerHTML="auto"; } 
-    else { document.getElementById('md').innerHTML="manual"; }
-
-    if (data.upload==true){ document.getElementById('c_upl').innerHTML="yes"; } 
-    else { document.getElementById('c_upl').innerHTML="no"; }
-
     if (is_onload==true){
+      if (data.mode==true){ document.getElementById('md').innerHTML="auto"; } 
+      else { document.getElementById('md').innerHTML="manual"; }
+
+      if (data.upload==true){ document.getElementById('c_upl').innerHTML="yes"; } 
+      else { document.getElementById('c_upl').innerHTML="no"; }
+
       if (data.fan_stat==true){ document.getElementById('f_stat').innerHTML="On"; } 
       else { document.getElementById('f_stat').innerHTML="Off"; }
 
