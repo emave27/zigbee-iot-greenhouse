@@ -1,13 +1,12 @@
 from datetime import date, datetime
 from decimal import Decimal
-from time import sleep
-import threading
-import struct
 
-
-#import external files
 import functions
 from mqttpi_class import PiMQTT
+from telebot import PyTeleBot
+from threading import Thread
+from time import sleep
+import struct
 
 #import from the digi xbee python library
 from digi.xbee.util import utils
@@ -52,8 +51,10 @@ mode=True #True --> auto, False --> manual
 fan_ison=False
 pump_ison=False
 upload=False
+notify=False
 reset=True
 mqtt_pi=None
+bot=None
 
 #internal bool var to check if pump is running (auto mode)
 #if True, the pump will never start
@@ -70,10 +71,10 @@ def reset_digital_out():
     if reset:
         third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_HIGH)
         third_remote.set_dio_value(DIGITAL_OUT_ONE, IOMode.DIGITAL_OUT_HIGH)
-        print('Digital output resetted')
+        print('\nDigital output resetted')
         reset=False
     else:
-        print('No need to reset')
+        pass
 
 #function to manually control fan and pump (manual mode)
 def manual_control(fan, pump):
@@ -97,6 +98,8 @@ def check_temp(temp_c):
     if temp_c > threshold and fan_ison==False:
         fan_ison=True
         print("Fan is on")
+        #send notification message
+        bot.send_message(text='Warning! Temperature above threshold', send=notify)
         third_remote.set_dio_value(DIGITAL_OUT_TWO, IOMode.DIGITAL_OUT_LOW)
     elif temp_c < (threshold+0.5) and fan_ison==True:
         fan_ison=False
@@ -223,6 +226,9 @@ def get_data(is_auto):
             pump_thread=threading.Thread(target=pump_callback, args=(duty_time,))
             pump_thread.daemon=True
             pump_thread.start()
+            
+            #send notification message
+            bot.send_message(text="Warning! Soil humidity below threshold.", send=notify)
             print('Water pump running')
     
     #pack the data as bytes and send them via MQTT
@@ -247,6 +253,9 @@ try:
         #connect the remote device (if found)
         connect_remote_device(zigbee_network, discovered_devices)
         mqtt_pi=PiMQTT()
+        bot=PyTeleBot()
+        #start bot polling loop
+        bot.start_polling_loop()
     else:
         #if not, close the local device and exit the script
         print('404: nodes not found')
@@ -257,7 +266,7 @@ try:
         mqtt_mode=mqtt_pi.pass_mode()
         if mode==True and mqtt_mode==True: #auto mode
             #get the settings
-            threshold, duty_time, upload_interval, _, upload=functions.get_settings()
+            threshold, duty_time, upload_interval, _, upload, notify=functions.get_settings()
             print('--\nAutomatic')
             get_data() #call get data (main function)
             sleep(upload_interval) #wait time defined by the user
@@ -274,9 +283,10 @@ except KeyboardInterrupt: #handle KeyboardInterrupt event (ctrl+c)
         #reset the digital output and close the local device
         reset=True
         reset_digital_out()
-        local_device.reset()
         local_device.close()
         #close mqtt connection
         mqtt_pi.on_keyboardinterrupt()
+        #stop bot polling loop
+        bot.stop_polling_loop()
         
         print("Execution stopped by the user, device closed and resetted")
