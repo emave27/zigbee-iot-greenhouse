@@ -56,7 +56,7 @@ class PiMQTT():
         self.mqttc.tls_set(ca_path, certfile=cert_path, keyfile=key_path, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)
 
         #connect to the endpoint and start the loop
-        self.mqttc.connect(endpoint, port, keepalive=1860)
+        self.mqttc.connect(endpoint, port, keepalive=600)
         self.mqttc.loop_start()
 
     #pass the data to the main loop
