@@ -12,9 +12,9 @@ class ServerMQTT():
             self.conn_flag=True
             if int(rc)==0:
                 print('Connection successful')
+                client.subscribe('sensors', 1)
             else:
                 print('Connection error:', str(rc))
-            client.subscribe('sensors', 1)
 
         def on_message(client, userdata, msg):
             [t, h]=struct.unpack('ff', msg.payload)
@@ -35,7 +35,7 @@ class ServerMQTT():
         endpoint="your endpoint"
         port=8883
 
-        self.mqttc.connect(endpoint, port, keepalive=1860)
+        self.mqttc.connect(endpoint, port, keepalive=600)
         self.mqttc.loop_start()
 
     def pass_data(self):
