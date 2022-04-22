@@ -45,8 +45,9 @@ def get_settings():
     upd_time=int(res['update'])
     mode=res['mode']
     upload=res['upload']
+    notify=res['notifications']
 
-    return temp_t, d_time, upd_time, mode, upload
+    return temp_t, hum_t, d_time, upd_time, mode, upload, notify
 
 def get_manual(depr=True): #deprecated, using mqtt
     if depr:
