@@ -39,22 +39,20 @@ class DynamoUtils():
             return response['Items']
 
     #function to update settings table
-    def update_sets(self, tt, ht, d, u, up):
+    def update_sets(self, tt, ht, d, u, no, up):
         table=self.dynamodb.Table('settings')
         
         try:
             response=table.update_item(
-                Key={
-                    'user_id': 'admin',
-                    'set_id': 0
-                },
-                UpdateExpression="set #tth=:tt, #uth=:ut, #dt=:d, #upd=:u, #upl=:up", ##mod=:m,
+                Key={'user_id': 'admin', 'set_id': 0},
+                UpdateExpression="set #tth=:tt, #uth=:ut, #dt=:d, #upd=:u, #upl=:up, #notf=:no, #mod=:m",
                 ExpressionAttributeValues={
                     ':tt': Decimal(tt),
                     ':ut': Decimal(ht),
                     ':d': Decimal(d),
                     ':u': Decimal(u),
-                    #':m': bool(m),
+                    ':m': True,
+                    ':no': bool(no),
                     ':up': bool(up)
                 },
                 ExpressionAttributeNames={
@@ -62,7 +60,8 @@ class DynamoUtils():
                     '#uth': 'hum_threshold',
                     '#dt': 'duty_time',
                     '#upd': 'update',
-                    #'#mod': 'mode',
+                    '#mod': 'mode',
+                    '#notf': 'notifications',
                     '#upl': 'upload'
                 }
             )
