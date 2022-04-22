@@ -223,7 +223,7 @@ def get_data(is_auto):
         #check the humidity value
         if hum_converted < 0 and pump_duty==False:
             #start the pump callback using a separate thread, without blocking the main thread
-            pump_thread=threading.Thread(target=pump_callback, args=(duty_time,))
+            pump_thread=Thread(target=pump_callback, args=(duty_time,))
             pump_thread.daemon=True
             pump_thread.start()
             
