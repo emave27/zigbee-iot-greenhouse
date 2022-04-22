@@ -1,0 +1,379 @@
+<!doctype html>
+<html>
+<head>
+  {{ turbo() }}
+  <title>Greenhouse Dashboard</title>
+  <style>
+    .navbar{background-color: #004225;}
+    .separator{margin-top:10px;}
+    .small-separator{margin-top: 15px;
+                     margin-bottom: 15px;}
+    .graph-canvas{visibility: none;}
+    .graphrow{margin-top: 20px;}
+
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button{
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .maincol{border-right: 1px solid black;}
+    /* Firefox */
+    input[type=number] {-moz-appearance: textfield;}
+  </style>
+</head>
+<body>
+<header>
+  <nav class="navbar navbar-expand-sm navbar-dark justify-content-end">
+  <a class="navbar-brand">Greenhouse dashboard</a>
+  <span class="ml-auto"></span>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
+  <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse flex-grow-0" id="navbarSupportedContent">
+    <ul class="navbar-nav text-right">
+      <li class="nav-item active">
+        <a class="nav-link">UniUD</a>
+      </li>
+    </ul>
+  </div>
+  </nav>
+</header>
+<div class="container-fluid separator">
+  <div class="row">
+    <div class="col-md-3 maincol">
+      {% include "loadavg.html" %}<br><br>
+      <div class="row align-items-end">
+        <div class="col-md-6">
+          <label class="my-1 mr-2" for="data_select">Show data from:</label>
+          <select class="custom-select mr-sm-2" name="datagraph" id="date_select">
+            <option selected value="1">Yesterday</option>
+            <option value="2">Two days ago</option>
+            <option value="3">Three days ago</option>
+            <option value="7">One week ago</option>
+          </select>
+        </div>
+        <div class="col-md-6"><button type="button" class="btn btn-primary" id="getdata_btn">Show graph</button></div>
+      </div>
+    </div>
+    <div class="col-md-3 maincol">
+    <h4>Current settings</h4>
+      <div class="col-auto">
+      Current temperature threshold: <span id="c_tt"></span> °C<br>
+      Current humidity threshold: <span id="h_tt"></span>%<br>
+      Current pump duty time: <span id="c_dt"></span> seconds<br>
+      Current update interval: <span id="c_upint"></span> seconds<br>
+      Upload data: <span id="c_upl"></span><br>
+      Notifications: <span id="c_not"></span>
+      </div>
+    </div>
+    <div class="col-md-3 maincol">
+    <h4>Update settings</h4>
+    <strong>Update all settings at the same time</strong>
+    <form class="set-form" role="form" id="set-form">
+      <div class="form-row align-items-center">
+        <div class="col-6">
+          <label for="temp_t" class="form-label">Temperature threshold</label>
+          <input type="number" name="temp_t" class="form-control" id="temp_t" placeholder="°C">
+        </div>
+        <div class="col-6">
+          <label for="hum_t" class="form-label">Humidity threshold</label>
+          <input type="number" name="hum_t" class="form-control" id="hum_t" placeholder="%">
+        </div>
+      </div>
+      <div class="form-row align-items-center">
+        <div class="col-6">
+          <label for="pump_duty" class="form-label">Pump duty time</label>
+          <input type="number" name="pump_d" class="form-control" id="pump_duty" placeholder="seconds">
+        </div>
+        <div class="col-6">
+          <label for="update_int" class="form-label">Update interval</label>
+          <input type="number" name="up_int" class="form-control" id="update_int" placeholder="seconds">
+        </div>
+      </div>
+    <div class="form-row align-items-center">
+      <div class="col-6">
+        <label class="my-1 mr-2" for="up_stat">Upload data</label>
+        <select class="custom-select mr-sm-2" name="upload" id="up_stat">
+          <option selected value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
+      </div>
+      <div class="col-6">
+        <label class="my-1 mr-2" for="not_stat">Notifications</label>
+        <select class="custom-select mr-sm-2" name="notifications" id="not_stat">
+          <option selected value="1">Enable</option>
+          <option value="0">Disable</option>
+        </select>
+      </div>
+    </div>
+    <small id="warning" class="form-text text-muted">&nbsp</small>
+    <button type="button" class="btn btn-primary" id="upd-button">Update</button>
+    </form>
+    </div>
+    <div class="col-md-3">
+      <h4>Mode control</h4>
+      <strong>The system will always start in auto mode</strong>
+      <label for="mode_sel" class="form-label">Current mode: <span id="md">auto</span></label><br>
+      <div class="btn-group btn-group-toggle" id="mode_sel" data-toggle="buttons">
+        <label class="btn btn-success">
+          <input type="radio" name="options" id="opt_auto" value="1"> Auto
+        </label>
+        <label class="btn btn-danger">
+          <input type="radio" name="options" id="opt_man" value="0"> Manual
+        </label>
+      </div>
+      <div class="small-separator"></div>
+      <h4>Manual control</h4>
+      <span>Set manual mode to manually controll fan and pump</span> 
+      <form class="man-form" id="man-form">
+      <div class="form-row align-items-center">
+        <div class="col-auto pump-col" id="pump-com">
+          Fan is currently: <span id="f_stat"></span> - Pump is currently: <span id="p_stat"></span>
+        </div>
+      </div>
+      <div class="form-row align-items-center">
+        <div class="col-auto fan-col" id="fan-col">
+          <label class="my-1 mr-2" for="fan_stat">Fan</label>
+          <select class="custom-select mr-sm-2" name="fan_stat" id="fan_stat">
+            <option selected value="1">On</option>
+            <option value="0">Off</option>
+          </select>
+        </div>
+        <div class="col-auto pump-col" id="pump-col">
+          <label class="my-1 mr-2" for="pump_stat">Pump</label>
+          <select class="custom-select mr-sm-2" name="pump_stat" id="pump_stat">
+            <option selected value="1">On</option>
+            <option value="0">Off</option>
+          </select>
+        </div>
+      </div>
+      <small id="warning" class="form-text text-muted">&nbsp</small>
+      <button type="button" class="btn btn-primary" id="man-button">Set</button>
+      </form>
+    </div>
+  </div>
+  <div class="row graphrow">
+    <div class="col-md-12">
+      <canvas id="test_chart" class="graph-canvas" style="width:100%;max-width:800px"></canvas>
+    </div>
+  </div>
+</div>
+<footer>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" integrity="sha384-zCbKRCUGaJDkqS1kPbPd7TveP5iyJE0EjAuZQTgFLD2ylzuqKfdKlfG/eSrtxUkn" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-fQybjgWLrvvRgtW6bFlB7jaZrFsaBXjsOMm/tB9LTS58ONXgqbR9W8oWht/amnpF" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+<script>
+  //function to update the settings data shown in the dashboard
+  function convert_data(in_data, is_onload){
+    const data=JSON.parse(in_data);
+    document.getElementById('c_dt').innerHTML=data.duty;
+    document.getElementById('c_tt').innerHTML=data.temp_thresh;
+    document.getElementById('h_tt').innerHTML=data.hum_thresh;
+    document.getElementById('c_upint').innerHTML=data.update;
+
+    if (data.upload==true){ document.getElementById('c_upl').innerHTML="yes"; } 
+    else { document.getElementById('c_upl').innerHTML="no"; }
+
+    if (data.notify==true){ document.getElementById('c_not').innerHTML="enabled"; } 
+    else { document.getElementById('c_not').innerHTML="disabled"; }
+
+    if (is_onload==true){
+      if (data.mode==true){ document.getElementById('md').innerHTML="auto"; } 
+      else { document.getElementById('md').innerHTML="manual"; }
+
+      if (data.upload==true){ document.getElementById('c_upl').innerHTML="yes"; } 
+      else { document.getElementById('c_upl').innerHTML="no"; }
+
+      if (data.notify==true){ document.getElementById('c_not').innerHTML="enabled"; } 
+      else { document.getElementById('c_not').innerHTML="disabled"; }
+
+      if (data.fan_stat==true){ document.getElementById('f_stat').innerHTML="On"; } 
+      else { document.getElementById('f_stat').innerHTML="Off"; }
+
+      if (data.pump_stat==true){ document.getElementById('p_stat').innerHTML="On"; } 
+      else { document.getElementById('p_stat').innerHTML="Off"; }
+    }
+  }
+
+  //function to update the manual status shown in the dashboard
+  function convert_manual_set(in_data){
+    const data=JSON.parse(in_data);
+    if (data.fan_stat==true){ document.getElementById('f_stat').innerHTML="On"; } 
+    else { document.getElementById('f_stat').innerHTML="Off"; }
+
+    if (data.pump_stat==true){ document.getElementById('p_stat').innerHTML="On"; } 
+    else { document.getElementById('p_stat').innerHTML="Off"; }
+  }
+
+  $(function(){
+    $('#opt_auto').click(function(){
+      var tog_auto=document.getElementById('opt_auto').value;
+      document.getElementById('md').innerHTML="auto";
+      console.log(tog_auto);
+      $.ajax({
+        url: '/update_mode_fromdash',
+        data: tog_auto,
+        type: 'POST',
+        success: function(response){
+          console.log(response);
+        },
+        error: function(error){
+          console.log(error);
+        }
+      });
+    });
+
+    $('#opt_man').click(function(){
+      var tog_man=document.getElementById('opt_man').value;
+      document.getElementById('md').innerHTML="manual";
+      $.ajax({
+        url: '/update_mode_fromdash',
+        data: tog_man,
+        type: 'POST',
+        success: function(response){
+          console.log(response);
+        },
+        error: function(error){
+          console.log(error);
+        }
+      });
+    });
+  });
+
+  $(function(){
+    //push settings to the server on button click
+	  $('#upd-button').click(function(){
+		  $.ajax({
+			  url: '/update_set_fromdash',
+			  data: $('#set-form').serialize(),
+			  type: 'POST',
+			  success: function(response){
+				  console.log(response);
+          //update settings data in the page
+          convert_data(response, false);
+          $('#set-form')[0].reset();
+			  },
+			  error: function(error){
+				  console.log(error);
+          $('#set-form')[0].reset();
+			  }
+		  });
+	  });
+
+    //push manual fan/pum status on button click
+    $('#man-button').click(function(){
+      $.ajax({
+        url: '/handle_manual',
+        data: $('#man-form').serialize(),
+        type: 'POST',
+        success: function(response){
+				  console.log(response);
+          //update manual status in the page
+          convert_manual_set(response);
+			  },
+			  error: function(error){
+				  console.log(error);
+          $('#man-form')[0].reset();
+			  }
+      });
+    });
+  });
+
+  //get current settings on page load
+  $(document).ready(function(){
+    $.ajax({
+      url: '/get_set',
+      data: 'current settings',
+      type: 'POST',
+      success: function(response){
+				console.log(response);
+        convert_data(response, true);
+			},
+			error: function(error){
+				console.log(error);
+			}
+    });
+  });
+
+  $(function(){
+    $('#getdata_btn').click(function(){
+      var shift=document.getElementById('date_select').value;
+      $.ajax({
+        url: '/get_data',
+        data: shift,
+        type: 'POST',
+        success: function(response){
+				//console.log(response);
+        $('#test_chart').show('fast');
+        adapt_and_show(response);
+			},
+			error: function(error){
+				console.log(error);
+			}
+      });
+    });
+  });
+
+  //read data from the server and draw graph
+  function adapt_and_show(res){
+    got_data=JSON.parse(res);
+
+    var times=got_data.time;
+    var temps=got_data.temperature;
+    var hums=got_data.humidity;
+
+    max_y=Math.max.apply(null, temps);
+    min_y=Math.min.apply(null, temps)
+    //parseInt(min_y-5)
+    //parseInt(max_y+5)
+    console.log(hums);
+
+    new Chart("test_chart", {
+      type: "line",
+      data: {
+        labels: times,
+        datasets: [{
+          label: 'Temperature',
+          yAxisID: 'A',
+          lineTension: 0,
+          pointRadius: 3,
+          pointBackgroundColor: "rgba(255,0,0,0.8)",
+          backgroundColor: "rgba(0,0,0,0.0)",
+          borderColor: "rgba(255,0,0,0.8)",
+          data: temps
+        },{
+          label: 'Humidity',
+          yAxisID: 'B',
+          lineTension: 0,
+          pointRadius: 3,
+          pointBackgroundColor: "rgba(0,0,255,0.8)",
+          backgroundColor: "rgba(0,0,0,0.0)",
+          borderColor: "rgba(0,0,255,0.8)",
+          data: hums
+        }]  
+      },
+      options:{
+        legend: {display: true},
+        scales: {
+          yAxes: [{
+            id: 'A',
+            type: 'linear',
+            position: 'left',
+            ticks: {min: 10, max: 30},
+            scaleLabel: { display: true, labelString: 'Air temperature in °C' }
+          },{
+            id: 'B',
+            type: 'linear',
+            position: 'right',
+            ticks: {min: 0, max:100},
+            scaleLabel: { display: true, labelString: 'Soil humidity %' }
+          }],
+        }
+      }
+    });
+  }
+</script>
+</footer>
+</body>
+</html>
