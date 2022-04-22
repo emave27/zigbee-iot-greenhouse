@@ -19,10 +19,10 @@ class PiMQTT():
         def on_connect(client, userdata, flags, rc):
             if int(rc)==0:
                 print('Connection successful')
+                self.conn_flag=True
+                client.subscribe(TOPICS)
             else:
                 print('Connection error:', str(rc))
-            self.conn_flag=True
-            client.subscribe(TOPICS)
 
         #on_message callback
         def on_message(client, userdata, msg):
