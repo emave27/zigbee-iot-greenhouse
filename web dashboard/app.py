@@ -98,7 +98,6 @@ def get_current_settings():
     table=dynautils.dynamodb.Table('settings')
 
     try:
-        #get the settings and the manual fan/pump status
         response=table.get_item(Key={'user_id':'admin', 'set_id':0})
         man_res=table.get_item(Key={'user_id':'admin', 'set_id':1})
     except ClientError as e:
@@ -113,10 +112,11 @@ def get_current_settings():
     upd_time=int(res['update'])
     mode=res['mode']
     upload=res['upload']
+    notify=res['notifications']
     fan_stat=man['fan']
     pump_stat=man['pump']
 
-    return json.dumps({'status':'OK','temp_thresh':temp_thresh,'hum_thresh':hum_thresh,'duty':d_time,'update':upd_time,'mode':mode,'upload':upload, 'fan_stat':fan_stat, 'pump_stat':pump_stat})
+    return json.dumps({'status':'OK','temp_thresh':temp_thresh,'hum_thresh':hum_thresh,'duty':d_time,'update':upd_time,'mode':mode,'upload':upload,'notify':notify,'fan_stat':fan_stat, 'pump_stat':pump_stat})
 
 @app.context_processor
 def update_fromMQTT():
@@ -130,9 +130,8 @@ def update_load():
     with app.app_context():
         while True:
             #push new data to the client every n seconds using turbo.push()
-            sleep(5)
+            sleep(30)
             turbo.push(turbo.replace(render_template('loadavg.html'), 'result'))
-            #print("clients: ", turbo.clients)
 
 @app.before_first_request
 def before_first_request():
