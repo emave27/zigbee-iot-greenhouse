@@ -22,12 +22,6 @@ MAX=1023
 SERIAL_PORT=""
 BAUD_RATE=115200
 
-#deprecated, nodes are automatically discovered by the script
-REMOTE_NODE_IDS=["FirstR", "SecondR", "ThirdR"]
-FIRST_NODE_ADDRESS=""
-SECOND_NODE_ADDRESS=""
-THIRD_NODE_ADDRESS=""
-
 #remote xbee IO line
 LINE_ONE=IOLine.DIO3_AD3 #first node, temperature
 LINE_TWO=IOLine.DIO1_AD1 #second node, soil humidity
