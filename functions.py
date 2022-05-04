@@ -92,6 +92,42 @@ def upload_data_double(date, time, to_upload, is_temp):
             }
         )
         print("Soil humidity data uploaded")
+        
+def update_chatid(dynamodb, chat_id):
+    if not dynamodb:
+        dynamodb=boto3.resource('dynamodb', region_name='')
+    else:
+        print('Using external connection')
+
+    table=dynamodb.Table('settings')
+    response=table.put_item(
+        Item={
+            'user_id': 'admin',
+            'set_id': 2,
+            'data': {'chat_id': str(chat_id)}
+        }
+    )
+
+    print('Chat id updated')
+
+def get_chatid(dynamodb):
+    if not dynamodb:
+        dynamodb=boto3.resource('dynamodb', region_name='')
+    else:
+        print('Using external connection')
+    
+    table=dynamodb.Table('settings')
+
+    try:
+        response=table.query(
+            KeyConditionExpression=Key('user_id').eq('admin'),
+            ScanIndexForward=False
+        )
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+    else:
+        resp=response['Items'][0]['data']['chat_id']
+        return int(resp)
 
 #simple function to convert humidity interval 0-1023 --> 0-100 (percentage)
 def convert_interval(value, leftMin, leftMax, rightMin, rightMax):
