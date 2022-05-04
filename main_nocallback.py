@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import functions
 from mqttpi_class import PiMQTT
-from telebot import PyTeleBot
+from pitelebot import PyTeleBot
 from threading import Thread
 from time import sleep
 import struct
